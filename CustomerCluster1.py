@@ -153,7 +153,7 @@ def export_df2web(df, filename):
         .table-head { display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
         .table-tools { display: flex; align-items: center; gap: 8px; }
-        input, .reset { padding: 10px 12px; border: 1px solid #dfe5ee; border-radius: 9px;
+        .reset { padding: 10px 12px; border: 1px solid #dfe5ee; border-radius: 9px;
             background: #fff; color: #344158; font: inherit; }
         .reset { cursor: pointer; }
         .reset:hover { border-color: #4969cf; color: #3e5fc2; }
@@ -173,7 +173,6 @@ def export_df2web(df, filename):
             .cards, .visuals { grid-template-columns: 1fr; }
             .card { padding: 16px; }
             .table-tools { width: 100%; }
-            input { flex: 1; min-width: 0; }
         }
     </style>
 </head>
@@ -211,7 +210,6 @@ def export_df2web(df, filename):
                     <div id="filter-label" class="hint">Tất cả các cụm</div>
                 </div>
                 <div class="table-tools">
-                    <input id="search" type="search" placeholder="Tìm khách hàng...">
                     <button id="reset" class="reset">Hiện tất cả</button>
                 </div>
             </div>
@@ -224,7 +222,7 @@ def export_df2web(df, filename):
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script>
         const colors = ['#4969cf', '#21a785', '#efa640', '#9267cf'];
-        const state = {groups: [], cluster: 'all', search: ''};
+        const state = {groups: [], cluster: 'all'};
         let pieChart;
 
         function setCluster(name) {
@@ -300,10 +298,7 @@ def export_df2web(df, filename):
             const groups = state.groups.filter(group =>
                 state.cluster === 'all' || group.name === state.cluster
             );
-            const query = state.search.toLocaleLowerCase();
-            const rows = groups.flatMap(group => group.rows).filter(row =>
-                Object.values(row).some(value => String(value).toLocaleLowerCase().includes(query))
-            );
+            const rows = groups.flatMap(group => group.rows);
             const columns = Object.keys(state.groups[0]?.rows[0] || {});
             document.querySelector('#visible-count').textContent = rows.length;
             const headings = columns.map(column =>
@@ -320,7 +315,7 @@ def export_df2web(df, filename):
 
         async function loadWorkbook() {
             if (location.protocol === 'file:') {
-                console.error('H?y m? trang qua GitHub Pages ho?c m?y ch? HTTP ?? ??c file Excel.');
+                console.error('Hãy mở trang qua GitHub Pages hoặc máy chủ HTTP để đọc file Excel.');
                 return;
             }
             try {
@@ -342,15 +337,12 @@ def export_df2web(df, filename):
             }
         }
 
-        document.querySelector('#search').addEventListener('input', event => {
-            state.search = event.target.value.trim();
-            renderTable();
-        });
         document.querySelector('#reset').addEventListener('click', () => setCluster('all'));
         loadWorkbook();
     </script>
 </body>
-</html>"""
+</html>
+"""
     Path(filename).write_text(html, encoding='utf-8')
 
 def visualize3DKmeans(df, columns, hover_data, cluster):
