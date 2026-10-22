@@ -1,233 +1,232 @@
-<!doctype html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Phân cụm khách hàng</title>
-    <style>
-        :root {
-            font-family: Inter, "Segoe UI", Arial, sans-serif;
-            color: #202b3c;
-            background: #f3f6fb;
-        }
-        * { box-sizing: border-box; }
-        body { margin: 0; }
-        .page { max-width: 1180px; margin: 36px auto; padding: 0 24px; }
-        header { margin-bottom: 24px; }
-        .eyebrow { color: #5272c4; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
-        h1 { margin: 8px 0; font-size: 30px; }
-        h2 { margin: 0; font-size: 18px; }
-        .muted { color: #748094; }
-        .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
-        .card { padding: 20px; background: #fff; border: 1px solid #e6eaf1;
-            border-radius: 16px; box-shadow: 0 10px 26px #24324a0a; }
-        .metric { color: #748094; font-size: 14px; }
-        .metric strong { display: block; margin-top: 8px; color: #202b3c; font-size: 27px; }
-        .visuals { display: grid; grid-template-columns: .9fr 1.35fr; gap: 16px; }
-        .card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-        .hint { color: #8994a5; font-size: 13px; }
-        .pie-wrap { max-width: 280px; margin: 20px auto 4px; }
-        #legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
-        .legend-item { display: flex; align-items: center; gap: 6px; color: #637087; font-size: 13px; }
-        .dot { width: 9px; height: 9px; border-radius: 50%; }
-        #bars { display: grid; gap: 18px; margin-top: 24px; }
-        .bar-row { display: grid; grid-template-columns: 62px 1fr 42px; align-items: center;
-            gap: 12px; width: 100%; padding: 3px 0; border: 0; background: transparent;
-            color: #56647a; font: inherit; text-align: left; cursor: pointer; }
-        .bar-row:hover .bar-track, .bar-row.active .bar-track { background: #e1e8f4; }
-        .bar-track { height: 10px; overflow: hidden; border-radius: 8px; background: #edf1f6; }
-        .bar-fill { height: 100%; border-radius: inherit; transition: width .35s ease; }
-        .bar-count { text-align: right; font-size: 13px; }
-        .table-card { margin-top: 16px; }
-        .table-head { display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
-        .table-tools { display: flex; align-items: center; gap: 8px; }
-        .reset { padding: 10px 12px; border: 1px solid #dfe5ee; border-radius: 9px;
-            background: #fff; color: #344158; font: inherit; }
-        .reset { cursor: pointer; }
-        .reset:hover { border-color: #4969cf; color: #3e5fc2; }
-        .table-wrap { max-height: 520px; overflow: auto; border: 1px solid #e5eaf1; border-radius: 11px; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td {
-            padding: 11px 13px;
-            border-bottom: 1px solid #e8edf3;
-            text-align: left;
-            white-space: nowrap;
-        }
-        th { position: sticky; top: 0; color: #41516b; background: #f4f7fb; }
-        tbody tr:hover { background: #f8faff; }
-        .empty { padding: 28px; color: #748094; text-align: center; }
-        @media (max-width: 760px) {
-            .page { margin: 22px auto; padding: 0 14px; }
-            .cards, .visuals { grid-template-columns: 1fr; }
-            .card { padding: 16px; }
-            .table-tools { width: 100%; }
-        }
-    </style>
-</head>
-<body>
-    <main class="page">
-        <header>
-            <div class="eyebrow">CUSTOMER ANALYTICS</div>
-            <h1>Phân cụm khách hàng</h1>
-        </header>
-        <section class="cards">
-            <div class="card metric">Số khách hàng<strong id="customer-count">—</strong></div>
-            <div class="card metric">Số cụm<strong id="cluster-count">—</strong></div>
-            <div class="card metric">Số khách đang xem<strong id="visible-count">—</strong></div>
-        </section>
-        <section class="visuals">
-            <article class="card">
-                <div class="card-title">
-                    <h2>Tỷ lệ theo cụm</h2>
-                </div>
-                <div class="pie-wrap"><canvas id="pie"></canvas></div>
-                <div id="legend"></div>
-            </article>
-            <article class="card">
-                <div class="card-title">
-                    <h2>Số lượng khách hàng</h2>
-                    <span class="hint">Chọn thanh để lọc</span>
-                </div>
-                <div id="bars"></div>
-            </article>
-        </section>
-        <section class="card table-card">
-            <div class="table-head">
-                <div>
-                    <h2>Danh sách khách hàng</h2>
-                    <div id="filter-label" class="hint">Tất cả các cụm</div>
-                </div>
-                <div class="table-tools">
-                    <button id="reset" class="reset">Hiện tất cả</button>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
-            </div>
-        </section>
-    </main>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script>
-        const colors = ['#4969cf', '#21a785', '#efa640', '#9267cf'];
-        const state = {groups: [], cluster: 'all'};
-        let pieChart;
-
-        function setCluster(name) {
-            state.cluster = name;
-            document.querySelector('#filter-label').textContent = name === 'all'
-                ? 'Tất cả các cụm'
-                : `Đang xem ${name.replace('Cluster_', 'Cụm ')}`;
-            document.querySelectorAll('.bar-row').forEach(button => {
-                button.classList.toggle('active', button.dataset.cluster === name);
-            });
-            renderTable();
-        }
-
-        function renderBars() {
-            const total = state.groups.reduce((sum, group) => sum + group.rows.length, 0);
-            const bars = state.groups.map((group, index) => {
-                const percent = group.rows.length / total * 100;
-                const title = `Cụm ${index + 1}: ${group.rows.length} khách (${percent.toFixed(1)}%)`;
-                return `<button class="bar-row" data-cluster="${group.name}" title="${title}">
-                    <span>Cụm ${index + 1}</span>
-                    <span class="bar-track">
-                        <span class="bar-fill"
-                              style="display:block;width:${percent}%;background:${colors[index]}"></span>
-                    </span>
-                    <span class="bar-count">${group.rows.length}</span>
-                </button>`;
-            }).join('');
-            document.querySelector('#bars').innerHTML = bars;
-            document.querySelectorAll('.bar-row').forEach(button => {
-                button.addEventListener('click', () => setCluster(button.dataset.cluster));
-            });
-        }
-
-        function renderPie() {
-            const total = state.groups.reduce((sum, group) => sum + group.rows.length, 0);
-            pieChart?.destroy();
-            pieChart = new Chart(document.querySelector('#pie'), {
-                type: 'pie',
-                data: {
-                    labels: state.groups.map((_, index) => `Cụm ${index + 1}`),
-                    datasets: [{
-                        data: state.groups.map(group => group.rows.length),
-                        backgroundColor: colors,
-                        borderColor: '#fff',
-                        borderWidth: 4,
-                        hoverOffset: 12
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {display: false},
-                        tooltip: {callbacks: {
-                            label: item => {
-                                const percent = (item.raw / total * 100).toFixed(1);
-                                return `${item.label}: ${item.raw} khách (${percent}%)`;
-                            }
-                        }}
-                    },
-                    onClick: (_, items) => {
-                        if (items.length) setCluster(state.groups[items[0].index].name);
-                    }
-                }
-            });
-            document.querySelector('#legend').innerHTML = state.groups.map((group, index) =>
-                `<span class="legend-item">` +
-                `<i class="dot" style="background:${colors[index]}"></i>` +
-                `Cụm ${index + 1}</span>`
-            ).join('');
-        }
-
-        function renderTable() {
-            const groups = state.groups.filter(group =>
-                state.cluster === 'all' || group.name === state.cluster
-            );
-            const rows = groups.flatMap(group => group.rows);
-            const columns = Object.keys(state.groups[0]?.rows[0] || {});
-            document.querySelector('#visible-count').textContent = rows.length;
-            const headings = columns.map(column =>
-                `<th>${column === 'cluster' ? 'Cụm' : column}</th>`
-            ).join('');
-            document.querySelector('#table-head').innerHTML = `<tr>${headings}</tr>`;
-            const body = rows.map(row => {
-                const cells = columns.map(column => `<td>${row[column] ?? ''}</td>`).join('');
-                return `<tr>${cells}</tr>`;
-            }).join('');
-            document.querySelector('#table-body').innerHTML = body ||
-                `<tr><td class="empty" colspan="${columns.length}">Không tìm thấy khách hàng.</td></tr>`;
-        }
-
-        async function loadWorkbook() {
-            if (location.protocol === 'file:') {
-                console.error('Hãy mở trang qua GitHub Pages hoặc máy chủ HTTP để đọc file Excel.');
-                return;
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Phân cụm khách hàng</title>
+        <style>
+            :root {
+                font-family: Inter, "Segoe UI", Arial, sans-serif;
+                color: #202b3c;
+                background: #f3f6fb;
             }
-            try {
-                const response = await fetch('./customers_cluster.xlsx');
-                if (!response.ok) throw new Error('Không tìm thấy customers_cluster.xlsx.');
-                const workbook = XLSX.read(await response.arrayBuffer(), {type: 'array'});
-                state.groups = workbook.SheetNames.map(name => ({
-                    name,
-                    rows: XLSX.utils.sheet_to_json(workbook.Sheets[name], {defval: ''})
-                }));
+            * { box-sizing: border-box; }
+            body { margin: 0; }
+            .page { max-width: 1180px; margin: 36px auto; padding: 0 24px; }
+            header { margin-bottom: 24px; }
+            .eyebrow { color: #5272c4; font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+            h1 { margin: 8px 0; font-size: 30px; }
+            h2 { margin: 0; font-size: 18px; }
+            .muted { color: #748094; }
+            .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+            .card { padding: 20px; background: #fff; border: 1px solid #e6eaf1;
+                border-radius: 16px; box-shadow: 0 10px 26px #24324a0a; }
+            .metric { color: #748094; font-size: 14px; }
+            .metric strong { display: block; margin-top: 8px; color: #202b3c; font-size: 27px; }
+            .visuals { display: grid; grid-template-columns: .9fr 1.35fr; gap: 16px; }
+            .card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+            .hint { color: #8994a5; font-size: 13px; }
+            .pie-wrap { max-width: 280px; margin: 20px auto 4px; }
+            #legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+            .legend-item { display: flex; align-items: center; gap: 6px; color: #637087; font-size: 13px; }
+            .dot { width: 9px; height: 9px; border-radius: 50%; }
+            #bars { display: grid; gap: 18px; margin-top: 24px; }
+            .bar-row { display: grid; grid-template-columns: 62px 1fr 42px; align-items: center;
+                gap: 12px; width: 100%; padding: 3px 0; border: 0; background: transparent;
+                color: #56647a; font: inherit; text-align: left; cursor: pointer; }
+            .bar-row:hover .bar-track, .bar-row.active .bar-track { background: #e1e8f4; }
+            .bar-track { height: 10px; overflow: hidden; border-radius: 8px; background: #edf1f6; }
+            .bar-fill { height: 100%; border-radius: inherit; transition: width .35s ease; }
+            .bar-count { text-align: right; font-size: 13px; }
+            .table-card { margin-top: 16px; }
+            .table-head { display: flex; justify-content: space-between; align-items: center;
+                flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+            .table-tools { display: flex; align-items: center; gap: 8px; }
+            .reset { padding: 10px 12px; border: 1px solid #dfe5ee; border-radius: 9px;
+                background: #fff; color: #344158; font: inherit; }
+            .reset { cursor: pointer; }
+            .reset:hover { border-color: #4969cf; color: #3e5fc2; }
+            .table-wrap { max-height: 520px; overflow: auto; border: 1px solid #e5eaf1; border-radius: 11px; }
+            table { width: 100%; border-collapse: collapse; font-size: 14px; }
+            th, td {
+                padding: 11px 13px;
+                border-bottom: 1px solid #e8edf3;
+                text-align: left;
+                white-space: nowrap;
+            }
+            th { position: sticky; top: 0; color: #41516b; background: #f4f7fb; }
+            tbody tr:hover { background: #f8faff; }
+            .empty { padding: 28px; color: #748094; text-align: center; }
+            @media (max-width: 760px) {
+                .page { margin: 22px auto; padding: 0 14px; }
+                .cards, .visuals { grid-template-columns: 1fr; }
+                .card { padding: 16px; }
+                .table-tools { width: 100%; }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="page">
+            <header>
+                <div class="eyebrow">CUSTOMER ANALYTICS</div>
+                <h1>Phân cụm khách hàng</h1>
+            </header>
+            <section class="cards">
+                <div class="card metric">Số khách hàng<strong id="customer-count">—</strong></div>
+                <div class="card metric">Số cụm<strong id="cluster-count">—</strong></div>
+                <div class="card metric">Số khách đang xem<strong id="visible-count">—</strong></div>
+            </section>
+            <section class="visuals">
+                <article class="card">
+                    <div class="card-title">
+                        <h2>Tỷ lệ theo cụm</h2>
+                    </div>
+                    <div class="pie-wrap"><canvas id="pie"></canvas></div>
+                    <div id="legend"></div>
+                </article>
+                <article class="card">
+                    <div class="card-title">
+                        <h2>Số lượng khách hàng</h2>
+                        <span class="hint">Chọn thanh để lọc</span>
+                    </div>
+                    <div id="bars"></div>
+                </article>
+            </section>
+            <section class="card table-card">
+                <div class="table-head">
+                    <div>
+                        <h2>Danh sách khách hàng</h2>
+                        <div id="filter-label" class="hint">Tất cả các cụm</div>
+                    </div>
+                    <div class="table-tools">
+                        <button id="reset" class="reset">Hiện tất cả</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table><thead id="table-head"></thead><tbody id="table-body"></tbody></table>
+                </div>
+            </section>
+        </main>
+        <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+        <script>
+            const colors = ['#4969cf', '#21a785', '#efa640', '#9267cf'];
+            const state = {groups: [], cluster: 'all'};
+            let pieChart;
+    
+            function setCluster(name) {
+                state.cluster = name;
+                document.querySelector('#filter-label').textContent = name === 'all'
+                    ? 'Tất cả các cụm'
+                    : `Đang xem ${name.replace('Cluster_', 'Cụm ')}`;
+                document.querySelectorAll('.bar-row').forEach(button => {
+                    button.classList.toggle('active', button.dataset.cluster === name);
+                });
+                renderTable();
+            }
+    
+            function renderBars() {
                 const total = state.groups.reduce((sum, group) => sum + group.rows.length, 0);
-                document.querySelector('#customer-count').textContent = total;
-                document.querySelector('#cluster-count').textContent = state.groups.length;
-                renderBars();
-                renderPie();
-                setCluster('all');
-            } catch (error) {
-                console.error(error);
+                const bars = state.groups.map((group, index) => {
+                    const percent = group.rows.length / total * 100;
+                    const title = `Cụm ${index + 1}: ${group.rows.length} khách (${percent.toFixed(1)}%)`;
+                    return `<button class="bar-row" data-cluster="${group.name}" title="${title}">
+                        <span>Cụm ${index + 1}</span>
+                        <span class="bar-track">
+                            <span class="bar-fill"
+                                  style="display:block;width:${percent}%;background:${colors[index]}"></span>
+                        </span>
+                        <span class="bar-count">${group.rows.length}</span>
+                    </button>`;
+                }).join('');
+                document.querySelector('#bars').innerHTML = bars;
+                document.querySelectorAll('.bar-row').forEach(button => {
+                    button.addEventListener('click', () => setCluster(button.dataset.cluster));
+                });
             }
-        }
-
-        document.querySelector('#reset').addEventListener('click', () => setCluster('all'));
-        loadWorkbook();
-    </script>
-</body>
+    
+            function renderPie() {
+                const total = state.groups.reduce((sum, group) => sum + group.rows.length, 0);
+                pieChart?.destroy();
+                pieChart = new Chart(document.querySelector('#pie'), {
+                    type: 'pie',
+                    data: {
+                        labels: state.groups.map((_, index) => `Cụm ${index + 1}`),
+                        datasets: [{
+                            data: state.groups.map(group => group.rows.length),
+                            backgroundColor: colors,
+                            borderColor: '#fff',
+                            borderWidth: 4,
+                            hoverOffset: 12
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {display: false},
+                            tooltip: {callbacks: {
+                                label: item => {
+                                    const percent = (item.raw / total * 100).toFixed(1);
+                                    return `${item.label}: ${item.raw} khách (${percent}%)`;
+                                }
+                            }}
+                        },
+                        onClick: (_, items) => {
+                            if (items.length) setCluster(state.groups[items[0].index].name);
+                        }
+                    }
+                });
+                document.querySelector('#legend').innerHTML = state.groups.map((group, index) =>
+                    `<span class="legend-item">` +
+                    `<i class="dot" style="background:${colors[index]}"></i>` +
+                    `Cụm ${index + 1}</span>`
+                ).join('');
+            }
+    
+            function renderTable() {
+                const groups = state.groups.filter(group =>
+                    state.cluster === 'all' || group.name === state.cluster
+                );
+                const rows = groups.flatMap(group => group.rows);
+                const columns = Object.keys(state.groups[0]?.rows[0] || {});
+                document.querySelector('#visible-count').textContent = rows.length;
+                const headings = columns.map(column =>
+                    `<th>${column === 'cluster' ? 'Cụm' : column}</th>`
+                ).join('');
+                document.querySelector('#table-head').innerHTML = `<tr>${headings}</tr>`;
+                const body = rows.map(row => {
+                    const cells = columns.map(column => `<td>${row[column] ?? ''}</td>`).join('');
+                    return `<tr>${cells}</tr>`;
+                }).join('');
+                document.querySelector('#table-body').innerHTML = body ||
+                    `<tr><td class="empty" colspan="${columns.length}">Không tìm thấy khách hàng.</td></tr>`;
+            }
+    
+            async function loadWorkbook() {
+                if (location.protocol === 'file:') {
+                    console.error('Hãy mở trang qua GitHub Pages hoặc máy chủ HTTP để đọc file Excel.');
+                    return;
+                }
+                try {
+                    const response = await fetch('./customers_cluster.xlsx');
+                    if (!response.ok) throw new Error('Không tìm thấy customers_cluster.xlsx.');
+                    const workbook = XLSX.read(await response.arrayBuffer(), {type: 'array'});
+                    state.groups = workbook.SheetNames.map(name => ({
+                        name,
+                        rows: XLSX.utils.sheet_to_json(workbook.Sheets[name], {defval: ''})
+                    }));
+                    const total = state.groups.reduce((sum, group) => sum + group.rows.length, 0);
+                    document.querySelector('#customer-count').textContent = total;
+                    document.querySelector('#cluster-count').textContent = state.groups.length;
+                    renderBars();
+                    renderPie();
+                    setCluster('all');
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+    
+            document.querySelector('#reset').addEventListener('click', () => setCluster('all'));
+            loadWorkbook();
+        </script>
+    </body>
 </html>
